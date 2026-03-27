@@ -1,10 +1,9 @@
 const CACHE_NAME = 'f1-v1';
 const ASSETS = [
   './',
-  './index.html',
-  './manifest.json',
-  // Agrega aquí tus archivos .css o .js si tienes, por ejemplo:
-  // './style.css'
+  'index.html',
+  'manifest.json',
+  'sw.js' // Agrégalo también para que se reconozca a sí mismo
 ];
 
 // Instalar el Service Worker y guardar archivos en caché
