@@ -1,43 +1,26 @@
-const CACHE = 'f1-pronosticos-v1';
+const CACHE_NAME = 'f1-v1';
 const ASSETS = [
-  './f1-pronosticos.html',
+  './',
+  './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  // Agrega aquí tus archivos .css o .js si tienes, por ejemplo:
+  // './style.css'
 ];
 
-self.addEventListener('install', e => {
+// Instalar el Service Worker y guardar archivos en caché
+self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS);
+    })
   );
-  self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', e => {
-  // Firebase y CDN siempre van a la red
-  if (e.request.url.includes('firebase') ||
-      e.request.url.includes('gstatic') ||
-      e.request.url.includes('googleapis')) {
-    return e.respondWith(fetch(e.request));
-  }
-  // Resto: cache first, luego red
+// Responder desde el caché cuando no hay red
+self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      }).catch(() => cached);
+    caches.match(e.request).then((response) => {
+      return response || fetch(e.request);
     })
   );
 });
