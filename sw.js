@@ -23,3 +23,6 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
+self.addEventListener('activate', (e) => {
+  e.waitUntil(clients.claim()); // Toma el control de la página inmediatamente
+});
