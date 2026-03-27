@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>F1 Pronósticos</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="F1 Pronósticos">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<style>
+:root{--red:#E10600;--dark:#1a1a1a;--bg:#f5f5f5;--border:#e0e0e0;--text:#1a1a1a;--muted:#666;--gold:#FFD700;--silver:#C0C0C0;--bronze:#CD7F32;--green:#00a651;--blue:#1565c0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.header{background:var(--dark);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header h1{font-size:17px;font-weight:700;letter-spacing:-.5px;}
+.header h1 span{color:var(--red);}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#666;display:inline-block;margin-left:6px;}
+.sync-dot.ok{background:#00a651;}
+.sync-dot.err{background:#E10600;}
+.sync-dot.loading{background:#FFD700;animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.user-badge{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;}
+.nav{display:flex;background:white;border-bottom:1px solid var(--border);overflow-x:auto;}
+.nav-btn{flex:1;min-width:68px;padding:11px 4px;border:none;background:none;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.nav-btn.active{color:var(--red);border-bottom-color:var(--red);}
+.screen{display:none;padding:16px;max-width:600px;margin:0 auto;}
+.screen.active{display:block;}
+.card{background:white;border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:14px;}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px;}
+.race-banner{background:var(--dark);color:white;border-radius:12px;padding:18px;margin-bottom:14px;}
+.race-banner .gp-name{font-size:20px;font-weight:700;margin-bottom:3px;}
+.race-banner .gp-sub{font-size:13px;color:rgba(255,255,255,.65);}
+.race-status{display:inline-block;margin-top:9px;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:600;}
+.status-open{background:var(--green);color:white;}
+.status-closed{background:var(--red);color:white;}
+/* PILOT GRID - pronóstico */
+.pilots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pilot-card{border:2px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .13s;position:relative;background:white;}
+.pilot-card:hover{border-color:#aaa;transform:translateY(-1px);}
+.pilot-card.sel-1{border-color:var(--gold);background:#fffbee;}
+.pilot-card.sel-2{border-color:var(--silver);background:#f8f8f8;}
+.pilot-card.sel-3{border-color:var(--bronze);background:#fff8f3;}
+.pilot-img{width:56px;height:56px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#ccc;flex-shrink:0;}
+.pilot-img img{width:100%;height:100%;object-fit:cover;object-position:top center;}
+.pilot-name{font-size:11px;font-weight:600;line-height:1.2;}
+.pilot-team{font-size:10px;color:var(--muted);margin-top:2px;}
+.pos-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#333;}
+.pos-badge.b1{background:var(--gold);}
+.pos-badge.b2{background:var(--silver);}
+.pos-badge.b3{background:var(--bronze);}
+/* PILOT GRID - pilotos tab */
+.team-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.team-pilot{display:flex;align-items:center;gap:10px;padding:10px;background:#f8f8f8;border-radius:10px;}
+.team-pilot-img{width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.team-pilot-img img{width:100%;height:100%;object-fit:cover;object-position:top center;}
+.sel-summary{display:flex;gap:7px;margin-bottom:14px;}
+.sel-slot{flex:1;border-radius:8px;padding:9px 6px;text-align:center;border:2px dashed var(--border);background:white;}
+.sel-slot.f1{border-style:solid;border-color:var(--gold);background:#fffbee;}
+.sel-slot.f2{border-style:solid;border-color:var(--silver);background:#f8f8f8;}
+.sel-slot.f3{border-style:solid;border-color:var(--bronze);background:#fff8f3;}
+.sel-slot .pos-lbl{font-size:10px;font-weight:700;color:var(--muted);}
+.sel-slot .sel-nm{font-size:12px;font-weight:600;margin-top:2px;}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .13s;}
+.btn-primary{background:var(--red);color:white;}
+.btn-primary:hover{background:#c50500;}
+.btn-primary:disabled{background:#ccc;cursor:not-allowed;}
+.btn-secondary{background:white;color:var(--text);border:1px solid var(--border);margin-top:7px;}
+.btn-blue{background:var(--blue);color:white;margin-top:7px;}
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;}
+.login-logo{font-size:44px;margin-bottom:6px;}
+.login-title{font-size:24px;font-weight:700;margin-bottom:3px;}
+.login-sub{color:var(--muted);font-size:13px;margin-bottom:28px;text-align:center;}
+.login-card{background:white;border-radius:14px;border:1px solid var(--border);padding:22px;width:100%;max-width:320px;}
+.lbl{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+.inp{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border-color .15s;margin-bottom:12px;}
+.inp:focus{border-color:var(--red);}
+.avatar-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+.av-opt{width:38px;height:38px;border-radius:50%;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent;background:#f0f0f0;}
+.av-opt:hover,.av-opt.selected{border-color:var(--red);background:#ffe;}
+.rank-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);}
+.rank-row:last-child{border-bottom:none;}
+.rank-pos{font-size:17px;font-weight:700;min-width:26px;color:var(--muted);}
+.rank-pos.rp1{color:var(--gold);}
+.rank-pos.rp2{color:var(--silver);}
+.rank-pos.rp3{color:var(--bronze);}
+.rank-av{width:36px;height:36px;border-radius:50%;font-size:19px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;}
+.result-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);}
+.result-item:last-child{border-bottom:none;}
+.rpos{width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.rpos.r1{background:var(--gold);color:#333;}
+.rpos.r2{background:var(--silver);color:#333;}
+.rpos.r3{background:var(--bronze);color:white;}
+.chip{font-size:10px;padding:3px 7px;border-radius:10px;background:#f0f0f0;display:flex;align-items:center;gap:3px;}
+.chip.ok{background:#e8f5e9;color:#2e7d32;}
+.dot{width:7px;height:7px;border-radius:50%;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:#222;color:white;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:500;transition:transform .3s;z-index:999;white-space:nowrap;max-width:90vw;text-align:center;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.empty{text-align:center;padding:36px 16px;color:var(--muted);}
+.empty .ico{font-size:36px;margin-bottom:8px;}
+.hist-race{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;}
+.hist-hdr{padding:11px 15px;background:var(--dark);color:white;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.hist-body{padding:12px 15px;display:none;}
+.hist-body.open{display:block;}
+.tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.tag-ok{background:#e8f5e9;color:#2e7d32;}
+.tag-pend{background:#fff3e0;color:#e65100;}
+.mini-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:white;font-size:11px;font-weight:600;cursor:pointer;color:var(--text);}
+.mini-btn.danger{color:var(--red);border-color:#ffcdd2;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal{background:white;border-radius:14px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:22px;}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:14px;}
+.modal-footer{display:flex;gap:8px;margin-top:14px;}
+.modal-footer .btn{flex:1;padding:11px;}
+.admin-warn{background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:10px 12px;font-size:12px;color:#e65100;margin-bottom:12px;}
+.firebase-setup{background:#e8f0fe;border:1px solid #b3c3f5;border-radius:10px;padding:14px;margin-bottom:14px;}
+.firebase-setup h3{font-size:14px;font-weight:700;color:#1565c0;margin-bottom:8px;}
+.firebase-setup p{font-size:12px;color:#333;line-height:1.5;margin-bottom:8px;}
+.loading-screen{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;color:white;}
+.loading-screen .spin{font-size:48px;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="loading-screen" class="loading-screen">
+  <div class="spin">🏎️</div>
+  <div style="margin-top:16px;font-size:15px;opacity:.7;">Conectando…</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-wrap" style="display:none;">
+  <div class="login-logo">🏎️</div>
+  <div class="login-title">F1 Pronósticos</div>
+  <div class="login-sub">El juego de la familia</div>
+  <div class="login-card">
+    <label class="lbl">Tu nombre</label>
+    <input type="text" class="inp" id="login-name" placeholder="Ej: Papá, María…" maxlength="20">
+    <label class="lbl">Tu avatar</label>
+    <div class="avatar-row">
+      <div class="av-opt selected" data-av="🏎️">🏎️</div>
+      <div class="av-opt" data-av="🏁">🏁</div>
+      <div class="av-opt" data-av="⚡">⚡</div>
+      <div class="av-opt" data-av="🔥">🔥</div>
+      <div class="av-opt" data-av="🏆">🏆</div>
+      <div class="av-opt" data-av="🎖️">🎖️</div>
+      <div class="av-opt" data-av="🦁">🦁</div>
+      <div class="av-opt" data-av="🐺">🐺</div>
+      <div class="av-opt" data-av="🦊">🦊</div>
+      <div class="av-opt" data-av="🐯">🐯</div>
+      <div class="av-opt" data-av="🦅">🦅</div>
+      <div class="av-opt" data-av="🐉">🐉</div>
+      <div class="av-opt" data-av="🚀">🚀</div>
+      <div class="av-opt" data-av="⭐">⭐</div>
+      <div class="av-opt" data-av="🎯">🎯</div>
+      <div class="av-opt" data-av="💥">💥</div>
+      <div class="av-opt" data-av="🌪️">🌪️</div>
+      <div class="av-opt" data-av="🍕">🍕</div>
+      <div class="av-opt" data-av="🧉">🧉</div>
+      <div class="av-opt" data-av="🎸">🎸</div>
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Entrar al juego</button>
+    <button class="btn btn-secondary" onclick="showAdminLogin()">Admin ⚙️</button>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div id="admin-login-screen" style="display:none;" class="login-wrap">
+  <div class="login-logo">⚙️</div>
+  <div class="login-title">Panel Admin</div>
+  <div class="login-sub">Solo para el dueño de la app</div>
+  <div class="login-card">
+    <label class="lbl">Contraseña</label>
+    <input type="password" class="inp" id="admin-pass" placeholder="Contraseña admin">
+    <button class="btn btn-primary" onclick="doAdminLogin()">Entrar como admin</button>
+    <button class="btn btn-secondary" onclick="showLogin()">Volver</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none;">
+  <div class="header">
+    <h1>F1 <span>Pronósticos</span></h1>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="sync-dot" class="sync-dot" title="Estado sincronización"></span>
+      <span class="user-badge" id="header-user" onclick="logout()">Salir</span>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showScreen('pronostico',this)">Pronóstico</button>
+    <button class="nav-btn" onclick="showScreen('pilotos',this)">Pilotos</button>
+    <button class="nav-btn" onclick="showScreen('predicciones',this)">Tabla</button>
+    <button class="nav-btn" onclick="showScreen('ranking',this)">Ranking</button>
+    <button class="nav-btn" onclick="showScreen('historial',this)">Historial</button>
+  </div>
+  <div id="screen-pronostico" class="screen active"></div>
+  <div id="screen-pilotos" class="screen"></div>
+  <div id="screen-predicciones" class="screen"></div>
+  <div id="screen-ranking" class="screen"></div>
+  <div id="screen-historial" class="screen"></div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="admin-app" style="display:none;">
+  <div class="header">
+    <h1>⚙️ <span>Admin</span></h1>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="sync-dot-admin" class="sync-dot" title="Estado sincronización"></span>
+      <span class="user-badge" onclick="logout()">Salir</span>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showAdminTab('carrera',this)">Carrera</button>
+    <button class="nav-btn" onclick="showAdminTab('historial',this)">Historial</button>
+    <button class="nav-btn" onclick="showAdminTab('usuarios',this)">Usuarios</button>
+    <button class="nav-btn" onclick="showAdminTab('config',this)">Config</button>
+  </div>
+  <div id="atab-carrera" class="screen active" style="max-width:600px;margin:0 auto;"></div>
+  <div id="atab-historial" class="screen" style="max-width:600px;margin:0 auto;"></div>
+  <div id="atab-usuarios" class="screen" style="max-width:600px;margin:0 auto;"></div>
+  <div id="atab-config" class="screen" style="max-width:600px;margin:0 auto;"></div>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" style="display:none;" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal-body"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE SDK -->
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getDatabase,ref,set,onValue,get}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ── Firebase config (se lee de localStorage para que el admin la configure una vez) ──
+function getFirebaseCfg(){
+  try{return JSON.parse(localStorage.getItem('f1_firebase_cfg')||'null');}catch(e){return null;}
+}
+
+let db=null,unsubscribe=null;
+
+function initFirebase(cfg){
+  try{
+    const app=initializeApp(cfg,'f1app');
+    db=getDatabase(app);
+    return true;
+  }catch(e){
+    console.error('Firebase init error',e);
+    return false;
+  }
+}
+
+// ── State ──
+let currentUser=null,isAdmin=false;
+let state={race:null,results:null,predictions:{},users:{},pastRaces:[],adminPass:'f1admin2025'};
+
+// ── Sync helpers ──
+function setSyncStatus(status){
+  const dots=['sync-dot','sync-dot-admin'];
+  dots.forEach(id=>{const el=document.getElementById(id);if(el){el.className='sync-dot '+(status||'');}});
+}
+
+async function saveState(){
+  // Always save to localStorage as backup
+  try{localStorage.setItem('f1_state_v3',JSON.stringify(state));}catch(e){}
+  if(!db){setSyncStatus('err');return;}
+  setSyncStatus('loading');
+  try{
+    await set(ref(db,'f1state'),state);
+    setSyncStatus('ok');
+  }catch(e){
+    console.error('Firebase save error',e);
+    setSyncStatus('err');
+    toast('⚠️ Sin conexión — datos guardados localmente');
+  }
+}
+
+function subscribeToState(){
+  if(!db) return;
+  const stateRef=ref(db,'f1state');
+  onValue(stateRef,snapshot=>{
+    const data=snapshot.val();
+    if(data){
+      state={...state,...data};
+      // Patch arrays that might come as objects from Firebase
+      if(state.pastRaces&&!Array.isArray(state.pastRaces)) state.pastRaces=Object.values(state.pastRaces);
+      localStorage.setItem('f1_state_v3',JSON.stringify(state));
+      setSyncStatus('ok');
+      refreshCurrentView();
+    }
+  },err=>{
+    console.error('Firebase listen error',err);
+    setSyncStatus('err');
+  });
+}
+
+function refreshCurrentView(){
+  if(!currentUser) return;
+  if(isAdmin){
+    renderAdminCarrera();renderAdminHistorial();renderAdminUsuarios();
+  } else {
+    const active=document.querySelector('#main-app .screen.active');
+    if(!active) return;
+    const id=active.id.replace('screen-','');
+    if(id==='pronostico') renderPronostico();
+    else if(id==='pilotos') renderPilotos();
+    else if(id==='predicciones') renderPredicciones();
+    else if(id==='ranking') renderRanking();
+    else if(id==='historial') renderHistorialUser();
+  }
+}
+
+// ── Init ──
+async function init(){
+  const cfg=getFirebaseCfg();
+  // Load local backup while connecting
+  try{const local=localStorage.getItem('f1_state_v3');if(local) state={...state,...JSON.parse(local)};}catch(e){}
+
+  if(cfg&&cfg.databaseURL){
+    const ok=initFirebase(cfg);
+    if(ok){
+      // Try to get latest from Firebase first
+      try{
+        const snap=await get(ref(db,'f1state'));
+        if(snap.val()) state={...state,...snap.val()};
+        if(state.pastRaces&&!Array.isArray(state.pastRaces)) state.pastRaces=Object.values(state.pastRaces);
+      }catch(e){setSyncStatus('err');}
+      subscribeToState();
+      setSyncStatus('ok');
+    } else {setSyncStatus('err');}
+  } else {
+    setSyncStatus('err');
+  }
+
+  document.getElementById('loading-screen').style.display='none';
+  const su=localStorage.getItem('f1_user');
+  if(su){
+    const u=JSON.parse(su);currentUser=u;isAdmin=u.isAdmin||false;
+    isAdmin?showAdminApp():showMainApp();
+  } else showLogin();
+}
+
+// ── Auth ──
+function $id(id){return document.getElementById(id);}
+function showEl(id,d='block'){$id(id).style.display=d;}
+function hideEl(id){$id(id).style.display='none';}
+
+function showLogin(){showEl('login-screen','flex');hideEl('admin-login-screen');hideEl('main-app');hideEl('admin-app');}
+function showAdminLogin(){hideEl('login-screen');showEl('admin-login-screen','flex');}
+
+function doLogin(){
+  const name=$id('login-name').value.trim();
+  if(!name) return toast('Ingresa tu nombre');
+  const av=document.querySelector('.av-opt.selected')?.dataset.av||'🏎️';
+  const uids=Object.keys(state.users||{});
+  const existing=uids.find(id=>state.users[id].name.toLowerCase()===name.toLowerCase());
+  let uid;
+  if(existing){uid=existing;state.users[uid].avatar=av;}
+  else{
+    if(uids.length>=10) return toast('Máximo 10 usuarios');
+    uid='u_'+Date.now();
+    state.users[uid]={name,avatar:av,points:0,history:[]};
+  }
+  currentUser={id:uid,name,avatar:av};
+  localStorage.setItem('f1_user',JSON.stringify(currentUser));
+  saveState();showMainApp();
+}
+
+function doAdminLogin(){
+  if($id('admin-pass').value!==state.adminPass) return toast('Contraseña incorrecta');
+  currentUser={id:'admin',name:'Admin',isAdmin:true};isAdmin=true;
+  localStorage.setItem('f1_user',JSON.stringify(currentUser));
+  showAdminApp();
+}
+
+function logout(){localStorage.removeItem('f1_user');currentUser=null;isAdmin=false;showLogin();}
+
+function showMainApp(){
+  hideEl('login-screen');hideEl('admin-login-screen');showEl('main-app');hideEl('admin-app');
+  $id('header-user').textContent=(currentUser.avatar||'👤')+' '+currentUser.name+' · Salir';
+  renderPronostico();renderRanking();renderHistorialUser();
+}
+
+function showScreen(name,btn){
+  document.querySelectorAll('#main-app .screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('#main-app .nav-btn').forEach(b=>b.classList.remove('active'));
+  $id('screen-'+name).classList.add('active');btn.classList.add('active');
+  if(name==='pilotos') renderPilotos();
+  if(name==='predicciones') renderPredicciones();
+  if(name==='ranking') renderRanking();
+  if(name==='historial') renderHistorialUser();
+}
+
+// ── Pronóstico ──
+let mySel={p1:null,p2:null,p3:null};
+function isOpen(){return state.race?.date&&new Date()<new Date(state.race.date);}
+function pName(id){const p=(state.race?.pilots||[]).find(x=>x.id===id);return p?p.name.split(' ')[0]:'?';}
+
+function pilotImgHTML(p,size=56){
+  if(p.img) return `<img src="${p.img}" alt="${p.name}" style="width:${size}px;height:${size}px;object-fit:cover;object-position:top center;border-radius:50%;" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><span style="display:none;width:${size}px;height:${size}px;border-radius:50%;background:${p.color||'#888'};align-items:center;justify-content:center;font-size:${Math.round(size*.35)}px;font-weight:700;color:white;">${p.name[0]}</span>`;
+  return `<span style="width:${size}px;height:${size}px;border-radius:50%;background:${p.color||'#888'};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*.35)}px;font-weight:700;color:white;">${p.name[0]}</span>`;
+}
+
+function pilotCardHTML(p){
+  const cls=mySel.p1===p.id?'sel-1':mySel.p2===p.id?'sel-2':mySel.p3===p.id?'sel-3':'';
+  const bn_=cls==='sel-1'?'1':cls==='sel-2'?'2':cls==='sel-3'?'3':'';
+  const bnc=cls==='sel-1'?'b1':cls==='sel-2'?'b2':cls==='sel-3'?'b3':'';
+  return `<div class="pilot-card ${cls}" onclick="selPilot('${p.id}')">
+    ${cls?`<div class="pos-badge ${bnc}">${bn_}</div>`:''}
+    <div class="pilot-img" style="background:${p.color||'#888'};width:56px;height:56px;">${pilotImgHTML(p,56)}</div>
+    <div class="pilot-name">${p.name}</div>
+    <div class="pilot-team" style="color:${p.color||'var(--muted)'};">${p.team}</div>
+  </div>`;
+}
+
+function podiumHTML(pred,pilots){
+  const gn=id=>{const p=(pilots||[]).find(x=>x.id===id);return p?p.name:'?';};
+  return `<div class="result-item"><div class="rpos r1">1</div><span style="font-size:13px;font-weight:600;">${gn(pred.p1)}</span></div>
+  <div class="result-item"><div class="rpos r2">2</div><span style="font-size:13px;font-weight:600;">${gn(pred.p2)}</span></div>
+  <div class="result-item"><div class="rpos r3">3</div><span style="font-size:13px;font-weight:600;">${gn(pred.p3)}</span></div>`;
+}
+
+function renderPronostico(){
+  const el=$id('screen-pronostico');
+  if(!state.race){el.innerHTML=`<div class="race-banner"><div class="gp-name">Sin carrera activa</div><div class="gp-sub">El admin aún no configuró una carrera</div></div>`;return;}
+  const open=isOpen();
+  const d=new Date(state.race.date);
+  const ds=d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});
+  const ts=d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  let html=`<div class="race-banner"><div class="gp-name">${state.race.name}</div><div class="gp-sub">${state.race.circuit||''}</div><div class="gp-sub" style="margin-top:3px;">🗓 ${ds} · ${ts}</div><span class="race-status ${open?'status-open':'status-closed'}">${open?'🟢 Pronósticos abiertos':'🔴 Cerrado'}</span></div>`;
+  const myPred=state.predictions[currentUser.id];
+  if(myPred) mySel={p1:myPred.p1,p2:myPred.p2,p3:myPred.p3};
+  if(!open){
+    if(myPred) html+=`<div class="card"><div class="card-title">Tu pronóstico</div>${podiumHTML(myPred,state.race.pilots)}</div>`;
+    else html+=`<div class="card"><div class="empty"><div class="ico">😞</div><p>No ingresaste pronóstico para esta carrera</p></div></div>`;
+    if(state.results) html+=`<div class="card"><div class="card-title">Resultado oficial</div>${podiumHTML(state.results,state.race.pilots)}</div>`;
+    else html+=`<div class="card"><div class="empty"><div class="ico">⏳</div><p>Esperando resultado oficial…</p></div></div>`;
+    el.innerHTML=html;return;
+  }
+  const pilots=state.race.pilots||[];
+  if(!pilots.length){el.innerHTML=html+`<div class="empty"><div class="ico">👷</div><p>El admin aún no cargó los pilotos</p></div>`;return;}
+  html+=`<p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Toca un piloto para elegir 1°, 2° y 3° lugar:</p>
+  <div class="sel-summary">
+    <div class="sel-slot ${mySel.p1?'f1':''}" id="sl1"><div class="pos-lbl">🥇 1°</div><div class="sel-nm" id="sn1">${mySel.p1?pName(mySel.p1):'—'}</div></div>
+    <div class="sel-slot ${mySel.p2?'f2':''}" id="sl2"><div class="pos-lbl">🥈 2°</div><div class="sel-nm" id="sn2">${mySel.p2?pName(mySel.p2):'—'}</div></div>
+    <div class="sel-slot ${mySel.p3?'f3':''}" id="sl3"><div class="pos-lbl">🥉 3°</div><div class="sel-nm" id="sn3">${mySel.p3?pName(mySel.p3):'—'}</div></div>
+  </div>
+  <div class="pilots-grid" id="pgrid">${pilots.map(p=>pilotCardHTML(p)).join('')}</div>
+  <button class="btn btn-primary" style="margin-top:14px;" id="spbtn" onclick="savePred()" ${(!mySel.p1||!mySel.p2||!mySel.p3)?'disabled':''}>
+    ${myPred?'Actualizar pronóstico':'Guardar pronóstico'}
+  </button>`;
+  el.innerHTML=html;
+}
+
+function selPilot(id){
+  if(!isOpen()) return;
+  if(mySel.p1===id) mySel.p1=null;
+  else if(mySel.p2===id) mySel.p2=null;
+  else if(mySel.p3===id) mySel.p3=null;
+  else if(!mySel.p1) mySel.p1=id;
+  else if(!mySel.p2) mySel.p2=id;
+  else if(!mySel.p3) mySel.p3=id;
+  else return toast('Ya elegiste 3. Toca uno para quitar.');
+  $id('pgrid').innerHTML=(state.race.pilots||[]).map(p=>pilotCardHTML(p)).join('');
+  [['sl1','sn1','p1','f1'],['sl2','sn2','p2','f2'],['sl3','sn3','p3','f3']].forEach(([si,ni,pos,fc])=>{
+    $id(si).className='sel-slot '+(mySel[pos]?fc:'');
+    $id(ni).textContent=mySel[pos]?pName(mySel[pos]):'—';
+  });
+  const btn=$id('spbtn');if(btn) btn.disabled=!(mySel.p1&&mySel.p2&&mySel.p3);
+}
+
+async function savePred(){
+  if(!mySel.p1||!mySel.p2||!mySel.p3) return toast('Elige 3 pilotos');
+  if(!isOpen()) return toast('Pronósticos cerrados');
+  state.predictions[currentUser.id]={...mySel,ts:new Date().toISOString()};
+  await saveState();toast('✅ Pronóstico guardado');
+  const btn=$id('spbtn');if(btn) btn.textContent='Actualizar pronóstico';
+}
+
+// ── Pilotos ──
+function renderPilotos(){
+  const el=$id('screen-pilotos');
+  const pilots=state.race?.pilots||[];
+  if(!state.race){el.innerHTML='<div class="empty"><div class="ico">🏎️</div><p>Sin carrera activa</p></div>';return;}
+  if(!pilots.length){el.innerHTML='<div class="empty"><div class="ico">👷</div><p>El admin aún no cargó los pilotos</p></div>';return;}
+  const teams={};
+  pilots.forEach(p=>{if(!teams[p.team]) teams[p.team]={color:p.color||'#888',pilots:[]};teams[p.team].pilots.push(p);});
+  let html=`<div class="card" style="margin-bottom:14px;"><div class="card-title">Grid del GP — ${state.race.name}</div>
+    <div style="font-size:13px;color:var(--muted);">${pilots.length} pilotos · ${Object.keys(teams).length} equipos</div></div>`;
+  Object.entries(teams).forEach(([teamName,team])=>{
+    html+=`<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+        <div style="width:4px;height:36px;border-radius:2px;background:${team.color};flex-shrink:0;"></div>
+        <div><div style="font-size:15px;font-weight:700;">${teamName}</div>
+        <div style="font-size:11px;color:var(--muted);">${team.pilots.length} piloto${team.pilots.length!==1?'s':''}</div></div>
+      </div>
+      <div class="team-grid">
+        ${team.pilots.map(p=>`
+          <div class="team-pilot">
+            <div class="team-pilot-img" style="width:52px;height:52px;background:${p.color||'#888'};">${pilotImgHTML(p,52)}</div>
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
+              <div style="font-size:10px;color:${p.color||'var(--muted)'};margin-top:2px;font-weight:500;">${teamName}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ── Predicciones ──
+function renderPredicciones(){
+  const el=$id('screen-predicciones');
+  if(!state.race){el.innerHTML='<div class="empty"><p>Sin carrera activa</p></div>';return;}
+  const pilots=state.race.pilots||[];
+  const gn=id=>{const p=pilots.find(x=>x.id===id);return p?p.name.split(' ')[0]:'?';};
+  const gc=id=>{const p=pilots.find(x=>x.id===id);return p?p.color||'#e10600':'#888';};
+  const open=isOpen();
+  const preds=Object.entries(state.predictions||{});
+  const cp=pred=>{if(!state.results) return null;let pt=0;if(pred.p1===state.results.p1)pt+=5;if(pred.p2===state.results.p2)pt+=3;if(pred.p3===state.results.p3)pt+=1;return pt;};
+  const ck=(id,pos)=>state.results&&state.results[pos]===id;
+  let html='';
+  html+=`<div class="race-banner" style="margin-bottom:14px;"><div class="gp-name" style="font-size:17px;">${state.race.name}</div><div class="gp-sub">${open?'🟢 Inscripción abierta':'🔴 Inscripción cerrada'}</div></div>`;
+  if(state.results){
+    html+=`<div class="card" style="margin-bottom:14px;"><div class="card-title">Resultado oficial</div><div style="display:flex;gap:8px;">
+      ${['p1','p2','p3'].map((pos,i)=>{
+        const medals=['🥇','🥈','🥉'];const p=pilots.find(x=>x.id===state.results[pos]);
+        return `<div style="flex:1;text-align:center;background:#f8f8f8;border-radius:10px;padding:10px 6px;">
+          <div style="font-size:18px;margin-bottom:4px;">${medals[i]}</div>
+          <div style="width:44px;height:44px;margin:0 auto 6px;border-radius:50%;overflow:hidden;background:${p?p.color||'#888':'#ccc'};display:flex;align-items:center;justify-content:center;">${p?pilotImgHTML(p,44):`<span style="color:white;font-weight:700;">?</span>`}</div>
+          <div style="font-size:11px;font-weight:700;line-height:1.2;">${p?p.name:'?'}</div>
+          <div style="font-size:10px;color:${p?p.color||'var(--muted)':'var(--muted)'};">${p?p.team:''}</div>
+        </div>`;
+      }).join('')}
+    </div></div>`;
+  }
+  if(!preds.length){html+='<div class="card"><div class="empty"><p>Nadie ha ingresado pronóstico aún</p></div></div>';el.innerHTML=html;return;}
+  if(open){
+    html+=`<div class="card"><div style="text-align:center;padding:18px;">
+      <div style="font-size:36px;font-weight:700;">${preds.length}</div>
+      <div style="font-size:13px;color:var(--muted);">pronóstico${preds.length!==1?'s':''} registrado${preds.length!==1?'s':''}</div>
+      <div style="font-size:11px;color:var(--muted);background:#f8f8f8;border-radius:8px;padding:8px;margin-top:10px;">🔒 Se revelan cuando cierre la inscripción</div>
+    </div></div>`;
+    el.innerHTML=html;return;
+  }
+  const sorted=preds.sort((a,b)=>(cp(b[1])||0)-(cp(a[1])||0));
+  html+=`<div class="card"><div class="card-title">Tabla de predicciones</div>`;
+  sorted.forEach(([uid,pred],rank)=>{
+    const u=state.users[uid];if(!u) return;
+    const pts=cp(pred);const isMe=uid===currentUser?.id;
+    const medals=['🥇','🥈','🥉'];
+    html+=`<div style="padding:12px 0;border-bottom:1px solid var(--border);${isMe?'background:#fff8e1;margin:0 -16px;padding:12px 16px;':''}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+        <span style="font-size:15px;min-width:22px;">${medals[rank]||'#'+(rank+1)}</span>
+        <span style="font-size:17px;">${u.avatar}</span>
+        <span style="font-size:14px;font-weight:700;flex:1;">${u.name}${isMe?' <span style="font-size:10px;font-weight:400;color:var(--muted);">(tú)</span>':''}</span>
+        ${pts!==null?`<span style="font-size:16px;font-weight:700;color:${pts>0?'var(--green)':'var(--muted)'};">${pts>0?'+':''}${pts} pts</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+        ${['p1','p2','p3'].map((pos,i)=>{
+          const pid=pred[pos];const pil=pilots.find(x=>x.id===pid);
+          const correct=ck(pid,pos);
+          return `<div style="background:${correct?'#e8f5e9':'#f5f5f5'};border-radius:8px;padding:7px 5px;text-align:center;border:1px solid ${correct?'#a5d6a7':'transparent'};">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${['🥇','🥈','🥉'][i]}</div>
+            <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;margin:0 auto 4px;background:${pil?pil.color||'#888':'#ccc'};display:flex;align-items:center;justify-content:center;">${pil?pilotImgHTML(pil,34):`<span style="color:white;font-size:12px;font-weight:700;">?</span>`}</div>
+            <div style="font-size:10px;font-weight:600;line-height:1.2;">${pil?pil.name.split(' ')[0]:'?'}</div>
+            ${correct?'<div style="font-size:9px;color:#2e7d32;margin-top:2px;">✓</div>':''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  if(state.results){
+    html+=`<div class="card" style="margin-top:4px;"><div class="card-title">Puntos de esta carrera</div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${sorted.map(([uid,pred],i)=>{
+          const u=state.users[uid];if(!u) return '';
+          const pts=cp(pred)||0;const isMe=uid===currentUser?.id;
+          return `<tr style="${isMe?'background:#fff8e1;':''}">
+            <td style="padding:8px 4px;font-size:13px;width:28px;">${['🥇','🥈','🥉'][i]||''}</td>
+            <td style="padding:8px 4px;font-size:16px;width:28px;">${u.avatar}</td>
+            <td style="padding:8px 4px;font-size:13px;font-weight:${isMe?700:500};">${u.name}</td>
+            <td style="padding:8px 4px;text-align:right;font-size:14px;font-weight:700;color:${pts>0?'var(--green)':'var(--muted)'};">${pts>0?'+'+pts:pts} pts</td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+  }
+  el.innerHTML=html;
+}
+
+// ── Ranking ──
+function renderRanking(){
+  const el=$id('screen-ranking');
+  const users=Object.entries(state.users||{}).sort((a,b)=>b[1].points-a[1].points);
+  let html=`<div class="card"><div class="card-title">Ranking General</div>`;
+  if(!users.length) html+='<div class="empty"><p>Sin participantes aún</p></div>';
+  else html+=users.map(([uid,u],i)=>{
+    const me=uid===currentUser?.id;
+    const rc=['rp1','rp2','rp3'][i]||'';const md=['🥇','🥈','🥉'][i]||'';
+    return `<div class="rank-row" style="${me?'background:#fff8e1;margin:0 -16px;padding:11px 16px;border-radius:8px;':''}">
+      <div class="rank-pos ${rc}">${md||'#'+(i+1)}</div>
+      <div class="rank-av">${u.avatar}</div>
+      <div style="flex:1;"><div style="font-size:14px;font-weight:600;">${u.name}${me?' <span style="font-size:10px;color:var(--muted);">(tú)</span>':''}</div>
+      <div style="font-size:11px;color:var(--muted);">${(u.history||[]).length} carrera${(u.history||[]).length!==1?'s':''}</div></div>
+      <div style="font-size:17px;font-weight:700;">${u.points} <span style="font-size:11px;color:var(--muted);">pts</span></div>
+    </div>`;
+  }).join('');
+  html+=`</div><div class="card"><div class="card-title">Puntos por posición</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.9;">🥇 1er lugar → 5 puntos<br>🥈 2do lugar → 3 puntos<br>🥉 3er lugar → 1 punto</div></div>`;
+  el.innerHTML=html;
+}
+
+// ── Historial usuario ──
+function calcPts(pred,results){let p=0;if(pred.p1===results.p1)p+=5;if(pred.p2===results.p2)p+=3;if(pred.p3===results.p3)p+=1;return p;}
+function togHist(el){const b=el.nextElementSibling;b.classList.toggle('open');const ar=el.querySelector('div:last-child div:last-child');if(ar) ar.textContent=b.classList.contains('open')?'▲':'▼';}
+
+function renderHistorialUser(){
+  const el=$id('screen-historial');
+  const past=state.pastRaces||[];
+  if(!past.length){el.innerHTML='<div class="empty"><div class="ico">📋</div><p>Aún no hay carreras completadas</p></div>';return;}
+  el.innerHTML=past.slice().reverse().map(race=>{
+    const myPred=race.predictions?race.predictions[currentUser.id]:null;
+    const myPts=myPred&&race.results?calcPts(myPred,race.results):0;
+    return `<div class="hist-race">
+      <div class="hist-hdr" onclick="togHist(this)">
+        <div><div style="font-size:14px;font-weight:600;">${race.name}</div><div style="font-size:11px;color:rgba(255,255,255,.55);">${race.circuit||''}</div></div>
+        <div style="text-align:right;">${myPts>0?`<div style="color:#4caf50;font-weight:700;font-size:13px;">+${myPts} pts</div>`:myPred?'<div style="color:#ff7043;font-size:13px;">0 pts</div>':'<div style="font-size:11px;color:#888;">sin pronóstico</div>'}
+        <div style="font-size:11px;color:rgba(255,255,255,.4);">▼</div></div>
+      </div>
+      <div class="hist-body">
+        ${race.results?`<div style="font-size:12px;font-weight:600;margin-bottom:6px;">Resultado oficial:</div>${podiumHTML(race.results,race.pilots||[])}`:'<p style="color:var(--muted);font-size:13px;">Sin resultado registrado</p>'}
+        ${myPred?`<div style="font-size:12px;font-weight:600;margin:10px 0 6px;">Tu pronóstico:</div>${podiumHTML(myPred,race.pilots||[])}`:'<p style="color:var(--muted);font-size:13px;margin-top:8px;">No ingresaste pronóstico</p>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Recalc ──
+function recalcAllPoints(){
+  Object.keys(state.users||{}).forEach(uid=>{state.users[uid].points=0;state.users[uid].history=[];});
+  (state.pastRaces||[]).forEach(race=>{
+    if(!race.results) return;
+    Object.entries(race.predictions||{}).forEach(([uid,pred])=>{
+      if(!state.users[uid]) return;
+      const pts=calcPts(pred,race.results);
+      state.users[uid].points=(state.users[uid].points||0)+pts;
+      state.users[uid].history.push({race:race.name,pts});
+    });
+  });
+  if(state.race&&state.results){
+    Object.entries(state.predictions||{}).forEach(([uid,pred])=>{
+      if(!state.users[uid]) return;
+      const pts=calcPts(pred,state.results);
+      state.users[uid].points=(state.users[uid].points||0)+pts;
+      state.users[uid].history.push({race:state.race.name,pts});
+    });
+  }
+}
+
+// ── Admin ──
+function showAdminApp(){
+  hideEl('login-screen');hideEl('admin-login-screen');hideEl('main-app');showEl('admin-app');
+  renderAdminCarrera();renderAdminHistorial();renderAdminUsuarios();renderAdminConfig();
+}
+
+function showAdminTab(name,btn){
+  document.querySelectorAll('#admin-app .screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('#admin-app .nav-btn').forEach(b=>b.classList.remove('active'));
+  $id('atab-'+name).classList.add('active');btn.classList.add('active');
+}
+
+function renderAdminCarrera(){
+  const el=$id('atab-carrera');const r=state.race;
+  el.innerHTML=`<div class="card">
+    <div class="card-title">Gran Premio actual</div>
+    <label class="lbl">Nombre del GP</label>
+    <input class="inp" id="a-gp-name" value="${r?.name||''}" placeholder="Gran Premio de…">
+    <label class="lbl">Circuito / País</label>
+    <input class="inp" id="a-gp-circuit" value="${r?.circuit||''}" placeholder="Circuito…">
+    <label class="lbl">Fecha y hora de la carrera</label>
+    <input class="inp" type="datetime-local" id="a-gp-date" value="${r?.date?r.date.slice(0,16):''}">
+    <button class="btn btn-primary" onclick="saveCurrentRace()">Guardar carrera</button>
+    ${r?`<button class="btn btn-secondary" style="margin-top:7px;" onclick="archiveCurrentRace()">📦 Archivar y crear nueva carrera</button>`:''}
+  </div>
+  <div class="card" id="admin-pilots-card">
+    <div class="card-title">Pilotos del GP actual</div>
+    ${!r?'<p style="font-size:13px;color:var(--muted);">Guarda primero la carrera</p>':adminPilotsForm()}
+  </div>
+  <div class="card" id="admin-results-card">
+    <div class="card-title">Resultado oficial</div>
+    ${!r?'<p style="font-size:13px;color:var(--muted);">Guarda primero la carrera</p>':adminResultsForm()}
+  </div>`;
+}
+
+function adminPilotsForm(){
+  const pilots=state.race?.pilots||[];
+  return `
+  <div style="background:#f0f4ff;border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid #c5cef5;">
+    <div style="font-size:11px;font-weight:700;color:#1565c0;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">📊 Importar desde Google Sheets</div>
+    <input class="inp" id="sheets-url" placeholder="URL de 'Publicar en la web' (Archivo → Publicar en la web → CSV)" style="margin-bottom:7px;">
+    <button class="btn" style="background:#1565c0;color:white;padding:10px;" onclick="importFromSheets()">Importar pilotos</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center;">— o agregar manualmente —</div>
+  <div style="display:flex;gap:6px;margin-bottom:7px;">
+    <input class="inp" id="pn" placeholder="Nombre piloto" style="flex:1;margin:0;">
+    <input class="inp" id="pt" placeholder="Equipo" style="width:110px;margin:0;">
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:10px;">
+    <input class="inp" id="pi" placeholder="URL foto (opcional)" style="flex:1;margin:0;">
+    <input type="color" id="pc" value="#e10600" style="width:42px;height:38px;border:1px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;">
+  </div>
+  <button class="btn btn-primary" style="margin-bottom:10px;" onclick="addPilot()">+ Agregar piloto</button>
+  <div id="admin-pilot-list">${pilotListHTML(pilots,false)}</div>`;
+}
+
+function pilotListHTML(pilots,isPast,raceIdx){
+  if(!pilots.length) return '<p style="font-size:13px;color:var(--muted);">Sin pilotos</p>';
+  return pilots.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8f8f8;border-radius:8px;margin-bottom:5px;">
+      <div style="width:9px;height:9px;border-radius:50%;background:${p.color||'#e10600'};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:12px;">${p.name} <span style="color:var(--muted);">${p.team}</span></span>
+      <button class="mini-btn danger" onclick="${isPast?`removePastPilot(${raceIdx},${i})`:`removePilot(${i})`}">✕</button>
+    </div>`).join('');
+}
+
+function adminResultsForm(){
+  const pilots=state.race?.pilots||[];
+  if(!pilots.length) return '<p style="font-size:13px;color:var(--muted);">Agrega pilotos primero</p>';
+  const r=state.results||{};
+  const sel=(id,val)=>`<select class="inp" id="${id}" style="margin-bottom:8px;"><option value="">Seleccionar…</option>${pilots.map(p=>`<option value="${p.id}" ${r[val]===p.id?'selected':''}>${p.name}</option>`).join('')}</select>`;
+  return `<label class="lbl">1° lugar</label>${sel('rp1','p1')}<label class="lbl">2° lugar</label>${sel('rp2','p2')}<label class="lbl">3° lugar</label>${sel('rp3','p3')}
+  <button class="btn btn-primary" onclick="saveCurrentResults()">Guardar resultado y calcular puntos</button>`;
+}
+
+async function saveCurrentRace(){
+  const name=$id('a-gp-name').value.trim(),circuit=$id('a-gp-circuit').value.trim(),date=$id('a-gp-date').value;
+  if(!name||!date) return toast('Nombre y fecha son obligatorios');
+  state.race={id:state.race?.id||'r_'+Date.now(),name,circuit,date,pilots:state.race?.pilots||[]};
+  await saveState();toast('✅ Carrera guardada');renderAdminCarrera();
+}
+
+async function archiveCurrentRace(){
+  if(!state.race) return;
+  if(!confirm('¿Archivar la carrera actual y crear una nueva?\nSe guardará en el historial.')) return;
+  state.pastRaces=state.pastRaces||[];
+  state.pastRaces.push({...state.race,results:state.results,predictions:{...state.predictions}});
+  state.race=null;state.results=null;state.predictions={};
+  await saveState();toast('Carrera archivada');renderAdminCarrera();renderAdminHistorial();
+}
+
+async function addPilot(){
+  const name=$id('pn').value.trim(),team=$id('pt').value.trim(),img=$id('pi').value.trim(),color=$id('pc').value;
+  if(!name||!team) return toast('Nombre y equipo obligatorios');
+  if(!state.race) return toast('Guarda la carrera primero');
+  state.race.pilots=state.race.pilots||[];
+  state.race.pilots.push({id:'p_'+Date.now(),name,team,img,color});
+  $id('pn').value='';$id('pt').value='';$id('pi').value='';
+  await saveState();
+  $id('admin-pilot-list').innerHTML=pilotListHTML(state.race.pilots,false);
+  $id('admin-results-card').innerHTML=`<div class="card-title">Resultado oficial</div>${adminResultsForm()}`;
+  toast('Piloto agregado');
+}
+
+async function removePilot(idx){
+  state.race.pilots.splice(idx,1);await saveState();
+  $id('admin-pilot-list').innerHTML=pilotListHTML(state.race.pilots,false);
+}
+
+function buildCsvUrl(rawUrl){
+  // Accepts two formats:
+  // 1. "Publish to web" URL: .../spreadsheets/d/e/2PACX-.../pub?...  → use as-is adding output=csv
+  // 2. Normal share URL:      .../spreadsheets/d/SHEET_ID/...         → convert to pub URL via gviz
+  const pubMatch=rawUrl.match(/\/spreadsheets\/d\/e\/([^/?#]+)/);
+  if(pubMatch) return `https://docs.google.com/spreadsheets/d/e/${pubMatch[1]}/pub?output=csv&gid=0`;
+  const idMatch=rawUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if(idMatch) return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+  return null;
+}
+
+function parseCsvLine(line){
+  // Handles quoted fields that may contain commas
+  const cols=[];let cur='';let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){inQ=!inQ;}
+    else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+    else cur+=c;
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+async function importFromSheets(){
+  const rawUrl=($id('sheets-url').value||'').trim();
+  if(!rawUrl) return toast('Pega la URL del Sheet');
+  const csvUrl=buildCsvUrl(rawUrl);
+  if(!csvUrl) return toast('URL no reconocida. Copia la URL desde Archivo → Publicar en la web.');
+  toast('Importando…');
+  try{
+    const res=await fetch(csvUrl);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text=await res.text();
+    const lines=text.trim().split('\n').filter(l=>l.trim());
+    if(lines.length<2) return toast('La hoja está vacía o tiene solo encabezado');
+    state.race.pilots=state.race.pilots||[];
+    let added=0;
+    for(let i=1;i<lines.length;i++){
+      const cols=parseCsvLine(lines[i]);
+      const [name,team,color,img]=cols;
+      if(!name||!team) continue;
+      if(state.race.pilots.find(p=>p.name.toLowerCase()===name.toLowerCase())) continue;
+      state.race.pilots.push({id:'p_'+Date.now()+'_'+i,name,team,color:color||'#e10600',img:img||''});
+      added++;
+    }
+    if(added===0) return toast('No se agregaron pilotos. Verifica que el encabezado sea: Nombre, Equipo, Color, Foto');
+    await saveState();
+    $id('admin-pilot-list').innerHTML=pilotListHTML(state.race.pilots,false);
+    $id('admin-results-card').innerHTML=`<div class="card-title">Resultado oficial</div>${adminResultsForm()}`;
+    $id('sheets-url').value='';
+    toast(`✅ ${added} piloto${added!==1?'s':''} importado${added!==1?'s':''}`);
+  }catch(e){
+    console.error(e);
+    toast('❌ Error de acceso. Sigue los pasos: Archivo → Publicar en la web → CSV → Copiar enlace');
+  }
+}
+
+async function saveCurrentResults(){
+  const p1=$id('rp1').value,p2=$id('rp2').value,p3=$id('rp3').value;
+  if(!p1||!p2||!p3) return toast('Selecciona los 3 lugares');
+  if(p1===p2||p1===p3||p2===p3) return toast('No puedes repetir pilotos');
+  state.results={p1,p2,p3};recalcAllPoints();
+  await saveState();toast('✅ Resultado guardado y puntos recalculados');renderAdminUsuarios();
+}
+
+// ── Admin Historial ──
+function renderAdminHistorial(){
+  const el=$id('atab-historial');
+  const past=state.pastRaces||[];
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <span style="font-size:15px;font-weight:700;">Carreras archivadas</span>
+    <button class="mini-btn" onclick="openNewPastRaceModal()">+ Nueva carrera pasada</button>
+  </div>`;
+  if(!past.length){html+='<div class="empty"><div class="ico">📋</div><p>No hay carreras archivadas aún</p></div>';el.innerHTML=html;return;}
+  html+=past.slice().reverse().map((race,ri)=>{
+    const idx=past.length-1-ri;
+    const hasPred=Object.keys(race.predictions||{}).length;
+    return `<div class="hist-race">
+      <div class="hist-hdr" onclick="togHist(this)">
+        <div><div style="font-size:14px;font-weight:600;">${race.name}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);">${race.circuit||''} ${race.date?'· '+new Date(race.date).toLocaleDateString('es-CL'):''}</div></div>
+        <div style="display:flex;align-items:center;gap:6px;"><span class="tag ${race.results?'tag-ok':'tag-pend'}">${race.results?'Con resultado':'Sin resultado'}</span><span style="font-size:11px;color:rgba(255,255,255,.4);">▼</span></div>
+      </div>
+      <div class="hist-body">
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <button class="mini-btn" onclick="openEditRaceInfoModal(${idx})">✏️ Info</button>
+          <button class="mini-btn" onclick="openEditPilotsModal(${idx})">👤 Pilotos</button>
+          <button class="mini-btn" onclick="openEditResultsModal(${idx})">🏆 Resultado</button>
+          <button class="mini-btn" onclick="openEditPredsModal(${idx})">📋 Pronósticos</button>
+          <button class="mini-btn danger" onclick="deletePastRace(${idx})">🗑 Eliminar</button>
+        </div>
+        ${race.results?`<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;">PODIO:</div>${podiumHTML(race.results,race.pilots||[])}`:'<p style="font-size:12px;color:var(--muted);">Sin resultado</p>'}
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">${hasPred} pronóstico${hasPred!==1?'s':''} registrado${hasPred!==1?'s':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML=html;
+}
+
+function openModal(html){$id('modal-body').innerHTML=html;showEl('modal-overlay','flex');}
+function closeModal(){hideEl('modal-overlay');}
+function closeModalOutside(e){if(e.target===$id('modal-overlay')) closeModal();}
+
+function openNewPastRaceModal(){
+  openModal(`<h2>Nueva carrera pasada</h2>
+    <label class="lbl">Nombre del GP</label><input class="inp" id="m-name" placeholder="Gran Premio de…">
+    <label class="lbl">Circuito</label><input class="inp" id="m-circuit" placeholder="Circuito…">
+    <label class="lbl">Fecha</label><input class="inp" type="datetime-local" id="m-date">
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveNewPastRace()">Crear</button></div>`);
+}
+
+async function saveNewPastRace(){
+  const name=$id('m-name').value.trim();if(!name) return toast('Nombre obligatorio');
+  state.pastRaces=state.pastRaces||[];
+  state.pastRaces.push({id:'r_'+Date.now(),name,circuit:$id('m-circuit').value.trim(),date:$id('m-date').value,pilots:[],results:null,predictions:{}});
+  await saveState();closeModal();renderAdminHistorial();toast('Carrera creada');
+}
+
+function openEditRaceInfoModal(idx){
+  const r=state.pastRaces[idx];
+  openModal(`<h2>Editar — ${r.name}</h2>
+    <label class="lbl">Nombre</label><input class="inp" id="m-name" value="${r.name}">
+    <label class="lbl">Circuito</label><input class="inp" id="m-circuit" value="${r.circuit||''}">
+    <label class="lbl">Fecha</label><input class="inp" type="datetime-local" id="m-date" value="${r.date?r.date.slice(0,16):''}">
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="savePastRaceInfo(${idx})">Guardar</button></div>`);
+}
+
+async function savePastRaceInfo(idx){
+  state.pastRaces[idx].name=$id('m-name').value.trim();
+  state.pastRaces[idx].circuit=$id('m-circuit').value.trim();
+  state.pastRaces[idx].date=$id('m-date').value;
+  await saveState();closeModal();renderAdminHistorial();toast('Carrera actualizada');
+}
+
+function openEditPilotsModal(idx){
+  const r=state.pastRaces[idx];
+  openModal(`<h2>Pilotos — ${r.name}</h2>
+    <div style="background:#f0f4ff;border-radius:8px;padding:10px;margin-bottom:12px;border:1px solid #c5cef5;">
+      <div style="font-size:11px;font-weight:700;color:#1565c0;margin-bottom:5px;">📊 Importar desde Google Sheets</div>
+      <input class="inp" id="mp-sheets" placeholder="URL de 'Publicar en la web' (Archivo → Publicar en la web → CSV)" style="margin-bottom:6px;">
+      <button class="btn" style="background:#1565c0;color:white;padding:9px;" onclick="importPastPilotsFromSheets(${idx})">Importar</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px;"><input class="inp" id="mp-name" placeholder="Nombre" style="flex:1;margin:0;"><input class="inp" id="mp-team" placeholder="Equipo" style="width:100px;margin:0;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;"><input class="inp" id="mp-img" placeholder="URL foto" style="flex:1;margin:0;"><input type="color" id="mp-color" value="#e10600" style="width:40px;height:38px;border:1px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"></div>
+    <button class="btn btn-primary" style="margin-bottom:10px;" onclick="addPastPilot(${idx})">+ Agregar</button>
+    <div id="mpl">${pilotListHTML(r.pilots||[],true,idx)}</div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div>`);
+}
+
+async function importPastPilotsFromSheets(idx){
+  const rawUrl=($id('mp-sheets').value||'').trim();
+  if(!rawUrl) return toast('Pega la URL primero');
+  const csvUrl=buildCsvUrl(rawUrl);
+  if(!csvUrl) return toast('URL no reconocida. Usa Archivo → Publicar en la web.');
+  toast('Importando…');
+  try{
+    const res=await fetch(csvUrl);if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text=await res.text();
+    const lines=text.trim().split('\n').filter(l=>l.trim());
+    state.pastRaces[idx].pilots=state.pastRaces[idx].pilots||[];
+    let added=0;
+    for(let i=1;i<lines.length;i++){
+      const cols=parseCsvLine(lines[i]);
+      const [name,team,color,img]=cols;
+      if(!name||!team) continue;
+      if(state.pastRaces[idx].pilots.find(p=>p.name.toLowerCase()===name.toLowerCase())) continue;
+      state.pastRaces[idx].pilots.push({id:'p_'+Date.now()+'_'+i,name,team,color:color||'#e10600',img:img||''});
+      added++;
+    }
+    if(added===0) return toast('Sin pilotos nuevos. Verifica el encabezado: Nombre, Equipo, Color, Foto');
+    await saveState();
+    $id('mpl').innerHTML=pilotListHTML(state.pastRaces[idx].pilots,true,idx);
+    toast(`✅ ${added} piloto${added!==1?'s':''} importado${added!==1?'s':''}`);
+  }catch(e){
+    console.error(e);
+    toast('❌ Error. Usa Archivo → Publicar en la web → CSV → Copiar enlace');
+  }
+}
+
+async function addPastPilot(idx){
+  const name=$id('mp-name').value.trim(),team=$id('mp-team').value.trim();
+  if(!name||!team) return toast('Nombre y equipo obligatorios');
+  state.pastRaces[idx].pilots=state.pastRaces[idx].pilots||[];
+  state.pastRaces[idx].pilots.push({id:'p_'+Date.now(),name,team,img:$id('mp-img').value.trim(),color:$id('mp-color').value});
+  $id('mp-name').value='';$id('mp-team').value='';
+  await saveState();$id('mpl').innerHTML=pilotListHTML(state.pastRaces[idx].pilots,true,idx);toast('Piloto agregado');
+}
+
+async function removePastPilot(raceIdx,pilotIdx){
+  state.pastRaces[raceIdx].pilots.splice(pilotIdx,1);await saveState();
+  $id('mpl').innerHTML=pilotListHTML(state.pastRaces[raceIdx].pilots,true,raceIdx);
+}
+
+function openEditResultsModal(idx){
+  const r=state.pastRaces[idx];const pilots=r.pilots||[];
+  if(!pilots.length) return toast('Primero agrega pilotos a esta carrera');
+  const res=r.results||{};
+  const sel=(id,val)=>`<select class="inp" id="${id}"><option value="">Seleccionar…</option>${pilots.map(p=>`<option value="${p.id}" ${res[val]===p.id?'selected':''}>${p.name}</option>`).join('')}</select>`;
+  openModal(`<h2>Resultado — ${r.name}</h2>
+    <label class="lbl">1° lugar</label>${sel('mr1','p1')}<label class="lbl">2° lugar</label>${sel('mr2','p2')}<label class="lbl">3° lugar</label>${sel('mr3','p3')}
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="savePastResults(${idx})">Guardar y recalcular</button></div>`);
+}
+
+async function savePastResults(idx){
+  const p1=$id('mr1').value,p2=$id('mr2').value,p3=$id('mr3').value;
+  if(!p1||!p2||!p3) return toast('Selecciona los 3 lugares');
+  if(p1===p2||p1===p3||p2===p3) return toast('No puedes repetir pilotos');
+  state.pastRaces[idx].results={p1,p2,p3};recalcAllPoints();
+  await saveState();closeModal();renderAdminHistorial();renderAdminUsuarios();toast('✅ Resultado guardado y puntos recalculados');
+}
+
+function openEditPredsModal(idx){
+  const r=state.pastRaces[idx];const pilots=r.pilots||[];
+  if(!pilots.length) return toast('Primero agrega pilotos a esta carrera');
+  const preds=r.predictions||{};const users=Object.entries(state.users||{});
+  if(!users.length) return toast('No hay usuarios registrados');
+  const rows=users.map(([uid,u])=>{
+    const pred=preds[uid]||{};
+    const sel=(fid,val)=>`<select style="flex:1;padding:7px 5px;border:1px solid var(--border);border-radius:6px;font-size:11px;" id="pred-${uid}-${val}"><option value="">—</option>${pilots.map(p=>`<option value="${p.id}" ${pred[val]===p.id?'selected':''}>${p.name.split(' ')[0]}</option>`).join('')}</select>`;
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+        <span style="font-size:16px;">${u.avatar}</span>
+        <span style="font-size:13px;font-weight:600;flex:1;">${u.name}</span>
+        <button class="mini-btn danger" onclick="clearOnePred('${uid}',${idx})">✕ Borrar</button>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <span style="font-size:10px;color:var(--muted);min-width:18px;">🥇</span>${sel('p1-'+uid,'p1')}
+        <span style="font-size:10px;color:var(--muted);min-width:18px;">🥈</span>${sel('p2-'+uid,'p2')}
+        <span style="font-size:10px;color:var(--muted);min-width:18px;">🥉</span>${sel('p3-'+uid,'p3')}
+      </div>
+    </div>`;
+  }).join('');
+  openModal(`<h2>Pronósticos — ${r.name}</h2>
+    <div class="admin-warn">⚠️ Solo el admin puede editar pronósticos de carreras pasadas.</div>
+    <div id="preds-list-modal">${rows}</div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="savePastPreds(${idx})">Guardar y recalcular</button></div>`);
+}
+
+function clearOnePred(uid,idx){
+  ['p1','p2','p3'].forEach(v=>{const el=$id(`pred-${uid}-${v}`);if(el) el.value='';});
+  toast('Limpiado (guarda para confirmar)');
+}
+
+async function savePastPreds(idx){
+  state.pastRaces[idx].predictions=state.pastRaces[idx].predictions||{};
+  Object.keys(state.users||{}).forEach(uid=>{
+    const p1=$id(`pred-${uid}-p1`)?.value,p2=$id(`pred-${uid}-p2`)?.value,p3=$id(`pred-${uid}-p3`)?.value;
+    if(p1&&p2&&p3&&p1!==p2&&p1!==p3&&p2!==p3){
+      state.pastRaces[idx].predictions[uid]={p1,p2,p3,ts:state.pastRaces[idx].date||new Date().toISOString()};
+    } else {delete state.pastRaces[idx].predictions[uid];}
+  });
+  recalcAllPoints();await saveState();closeModal();renderAdminHistorial();renderAdminUsuarios();toast('✅ Pronósticos guardados y puntos recalculados');
+}
+
+async function deletePastRace(idx){
+  if(!confirm(`¿Eliminar "${state.pastRaces[idx].name}"?`)) return;
+  state.pastRaces.splice(idx,1);recalcAllPoints();
+  await saveState();renderAdminHistorial();renderAdminUsuarios();toast('Carrera eliminada');
+}
+
+// ── Admin Usuarios ──
+function renderAdminUsuarios(){
+  const el=$id('atab-usuarios');
+  const users=Object.entries(state.users||{}).sort((a,b)=>b[1].points-a[1].points);
+  let html=`<div class="card"><div class="card-title">Participantes</div>`;
+  if(!users.length) html+='<p style="font-size:13px;color:var(--muted);">Sin usuarios</p>';
+  else html+=users.map(([uid,u])=>`
+    <div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:20px;">${u.avatar}</span>
+      <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${u.name}</div>
+      <div style="font-size:11px;color:var(--muted);">${(u.history||[]).length} carreras jugadas</div></div>
+      <div style="font-weight:700;font-size:15px;">${u.points} pts</div>
+      <button class="mini-btn danger" onclick="removeUser('${uid}')">✕</button>
+    </div>`).join('');
+  html+='</div>';el.innerHTML=html;
+}
+
+async function removeUser(uid){
+  if(!confirm('¿Eliminar a '+state.users[uid].name+'?')) return;
+  delete state.users[uid];delete state.predictions[uid];
+  (state.pastRaces||[]).forEach(r=>{if(r.predictions) delete r.predictions[uid];});
+  recalcAllPoints();await saveState();renderAdminUsuarios();toast('Usuario eliminado');
+}
+
+// ── Admin Config ──
+function renderAdminConfig(){
+  const cfg=getFirebaseCfg();
+  const hasCfg=!!(cfg&&cfg.databaseURL);
+  $id('atab-config').innerHTML=`
+  <div class="firebase-setup">
+    <h3>🔥 Configuración Firebase ${hasCfg?'<span style="color:#00a651;font-size:12px;">✓ Conectado</span>':'<span style="color:#E10600;font-size:12px;">✗ Sin configurar</span>'}</h3>
+    <p>Firebase permite que todos los dispositivos vean los mismos datos en tiempo real. Sigue la guía de configuración para obtener los valores necesarios.</p>
+    <label class="lbl">API Key</label>
+    <input class="inp" id="fb-apikey" value="${cfg?.apiKey||''}" placeholder="AIzaSy…">
+    <label class="lbl">Auth Domain</label>
+    <input class="inp" id="fb-authdomain" value="${cfg?.authDomain||''}" placeholder="mi-proyecto.firebaseapp.com">
+    <label class="lbl">Database URL</label>
+    <input class="inp" id="fb-dburl" value="${cfg?.databaseURL||''}" placeholder="https://mi-proyecto-default-rtdb.firebaseio.com">
+    <label class="lbl">Project ID</label>
+    <input class="inp" id="fb-projectid" value="${cfg?.projectId||''}" placeholder="mi-proyecto">
+    <label class="lbl">App ID</label>
+    <input class="inp" id="fb-appid" value="${cfg?.appId||''}" placeholder="1:123456:web:abc123">
+    <button class="btn btn-primary" onclick="saveFirebaseCfg()">Guardar configuración Firebase</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Contraseña admin</div>
+    <input class="inp" type="password" id="new-pass" placeholder="Nueva contraseña (mín. 4 caracteres)">
+    <button class="btn btn-primary" onclick="changePass()">Cambiar contraseña</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Recalcular puntos</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Recalcula todos los puntos desde cero.</p>
+    <button class="btn btn-blue" onclick="forceRecalc()">Recalcular todo</button>
+  </div>`;
+}
+
+function saveFirebaseCfg(){
+  const cfg={
+    apiKey:$id('fb-apikey').value.trim(),
+    authDomain:$id('fb-authdomain').value.trim(),
+    databaseURL:$id('fb-dburl').value.trim(),
+    projectId:$id('fb-projectid').value.trim(),
+    appId:$id('fb-appid').value.trim()
+  };
+  if(!cfg.apiKey||!cfg.databaseURL) return toast('API Key y Database URL son obligatorios');
+  localStorage.setItem('f1_firebase_cfg',JSON.stringify(cfg));
+  toast('✅ Configuración guardada — recarga la página para conectar');
+  renderAdminConfig();
+}
+
+async function changePass(){
+  const p=$id('new-pass').value;if(!p||p.length<4) return toast('Contraseña muy corta');
+  state.adminPass=p;await saveState();toast('✅ Contraseña actualizada');
+}
+
+async function forceRecalc(){recalcAllPoints();await saveState();renderAdminUsuarios();toast('✅ Puntos recalculados');}
+
+// ── Avatar select ──
+document.querySelectorAll('.av-opt').forEach(opt=>{
+  opt.addEventListener('click',function(){
+    document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('selected'));
+    this.classList.add('selected');
+  });
+});
+
+// ── Toast ──
+function toast(msg){const t=$id('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ── Expose globals for inline onclick ──
+Object.assign(window,{
+  showLogin,showAdminLogin,doLogin,doAdminLogin,logout,showScreen,showAdminTab,
+  selPilot,savePred,togHist,
+  saveCurrentRace,archiveCurrentRace,addPilot,removePilot,importFromSheets,saveCurrentResults,
+  renderAdminCarrera,renderAdminHistorial,renderAdminUsuarios,renderAdminConfig,
+  openNewPastRaceModal,saveNewPastRace,openEditRaceInfoModal,savePastRaceInfo,
+  openEditPilotsModal,addPastPilot,removePastPilot,importPastPilotsFromSheets,
+  openEditResultsModal,savePastResults,openEditPredsModal,clearOnePred,savePastPreds,deletePastRace,
+  removeUser,saveFirebaseCfg,changePass,forceRecalc,closeModal,closeModalOutside
+});
+
+// ── Start ──
+init();
+</script>
+
+<!-- PWA Service Worker -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(r=>console.log('SW registrado:',r.scope))
+      .catch(e=>console.log('SW error:',e));
+  });
+}
+</script>
+</body>
+</html>
